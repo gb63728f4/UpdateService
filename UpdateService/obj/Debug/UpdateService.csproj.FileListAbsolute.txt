@@ -6,3 +6,15 @@ D:\Project\CSS\MSS_API_2023\Service\UpdateService\UpdateService\obj\Debug\Update
 D:\Project\CSS\MSS_API_2023\Service\UpdateService\UpdateService\obj\Debug\UpdateService.csproj.CoreCompileInputs.cache
 D:\Project\CSS\MSS_API_2023\Service\UpdateService\UpdateService\obj\Debug\UpdateService.exe
 D:\Project\CSS\MSS_API_2023\Service\UpdateService\UpdateService\obj\Debug\UpdateService.pdb
+C:\Project\UpdateService\UpdateService\bin\Debug\UpdateService.exe.config
+C:\Project\UpdateService\UpdateService\bin\Debug\UpdateService.exe
+C:\Project\UpdateService\UpdateService\bin\Debug\UpdateService.pdb
+C:\Project\UpdateService\UpdateService\obj\Debug\UpdateService.csproj.AssemblyReference.cache
+C:\Project\UpdateService\UpdateService\obj\Debug\UpdateService.csproj.SuggestedBindingRedirects.cache
+C:\Project\UpdateService\UpdateService\obj\Debug\UpdateService.csproj.CoreCompileInputs.cache
+C:\Project\UpdateService\UpdateService\obj\Debug\UpdateService.exe
+C:\Project\UpdateService\UpdateService\obj\Debug\UpdateService.pdb
+C:\Project\UpdateService\UpdateService\bin\Debug\UpdateService.exe.manifest
+C:\Project\UpdateService\UpdateService\bin\Debug\UpdateService.application
+C:\Project\UpdateService\UpdateService\obj\Debug\UpdateService.exe.manifest
+C:\Project\UpdateService\UpdateService\obj\Debug\UpdateService.application

@@ -15,37 +15,21 @@ namespace UpdateService
     {
         public static AutoResetEvent autoResetEvent = new AutoResetEvent(false);
 
-        public static readonly string DestinationFilePath = WebConfigurationManager.AppSettings["DestinationFilePath"].ToString();//服務安裝位置
-        public static readonly string ServiceFilePath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"\ServiceFiles";//服務本地位置
-        public static readonly string ExecuteMode = WebConfigurationManager.AppSettings["ExecuteMode"].ToString();//服務安裝模式
-        public static List<string> FList = GetFolderName(ServiceFilePath);
+        public static readonly string destinationFilePath = WebConfigurationManager.AppSettings["DestinationFilePath"].ToString();//服務安裝位置
+        public static readonly string serviceFilePath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"\ServiceFiles";//服務本地位置
+        public static readonly string executeMode = WebConfigurationManager.AppSettings["ExecuteMode"].ToString();//服務安裝模式
 
         public static void Main(string[] args)
         {
             try
             {
-                //目的地無資料夾先建立
-                if (!Directory.Exists(DestinationFilePath))
-                {
-                    Console.WriteLine("建立目的地資料夾");
-                    Directory.CreateDirectory(DestinationFilePath);
-                }
-
-                foreach (string Name in FList)
-                {
-                    string Folder = DestinationFilePath + @"\" + Name;
-                    if (!Directory.Exists(Folder))
-                    {
-                        Console.WriteLine("建立目的地服務資料夾");
-                        Directory.CreateDirectory(Folder);
-                    }
-                }
-
-                ExecuteProcess(AppDomain.CurrentDomain.SetupInformation.ApplicationBase);
+                //建立ServiceFiles資料夾
+                if (!Directory.Exists(serviceFilePath)) Directory.CreateDirectory(serviceFilePath);
+                ExecuteProcess();
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("錯誤資訊：" + e.Message);
             }
             Console.ReadKey();
         }
@@ -53,155 +37,158 @@ namespace UpdateService
         /// <summary>
         /// 執行流程
         /// </summary>
-        static void ExecuteProcess(string FilePath)
+        static void ExecuteProcess()
         {
-            string Pattern = @".+\\";
-            string[] UFileArr = Directory.GetFiles(FilePath, "UnInstall_*.bat", SearchOption.AllDirectories);//尋找所有UnInstall_開頭bat檔
-            string[] IFileArr = Directory.GetFiles(FilePath, "Install_*.bat", SearchOption.AllDirectories);//尋找所有Install_開頭bat檔
-            if (ExecuteMode.Equals("Complete"))
+            Match match;
+            string pattern = @".+\\";
+            List<string> list_Files = GetFolderName(serviceFilePath);
+            if (list_Files.Count > 0)
             {
-                if (UFileArr.Length != 0)
+                foreach (string folderName in list_Files)
                 {
-                    //解除安裝
-                    foreach (string BatPath in UFileArr)
-                    {
-                        Match m = Regex.Match(BatPath, Pattern);
-                        string BatDirectory = m.Value;//UnInstall...bat資料夾路徑
-                        string BatFile = BatPath.Replace(m.Value, "");//BAT檔案名稱(含副檔名)
-                        UnInstall(BatDirectory, BatFile);
-                    }
+                    string sFilePath = serviceFilePath + @"\" + folderName;//本地路徑
+                    string dFilePath = destinationFilePath + @"\" + folderName;//目的地路徑
 
-                    //覆寫檔案
-                    foreach (string Name in FList)
+                    string[] list_UnInstall = Directory.GetFiles(sFilePath, "UnInstall*.bat", SearchOption.AllDirectories); //尋找UnInstall開頭bat檔
+                    string[] list_Install = Directory.GetFiles(sFilePath, "Install*.bat", SearchOption.AllDirectories);//尋找Install開頭bat檔
+                    if (list_UnInstall.Length == 1 && list_Install.Length == 1)
                     {
-                        string DFilePath = DestinationFilePath + @"\" + Name;//目的地路徑
-                        string OFilePath = ServiceFilePath + @"\" + Name;//本地路徑
-                        OverWriteFile(DFilePath, OFilePath, Name);
-                    }
+                        if (!Directory.Exists(dFilePath))
+                        {
+                            Console.WriteLine($"建立目的地服務資料夾 {folderName}");
+                            Directory.CreateDirectory(dFilePath);
+                        }
 
-                    //安裝
-                    int i = 0;
-                    foreach (string BatPath in IFileArr)
-                    {
-                        string DFilePath = DestinationFilePath + @"\" + FList[i];//目的地路徑
-                        Match m = Regex.Match(BatPath, Pattern);
-                        string BatFile = BatPath.Replace(m.Value, "");//BAT檔案名稱(含副檔名)
-                        i++;
-                        Install(DFilePath, BatFile);
-                    }
-                }
-                else Console.WriteLine("未找到任何開頭UnInstall...檔案");
-            }
-            else if (ExecuteMode.Equals("UnInstall"))
-            {
-                if (UFileArr.Length != 0)
-                {
-                    //解除安裝
-                    foreach (string BatPath in UFileArr)
-                    {
-                        Match m = Regex.Match(BatPath, Pattern);
-                        string BatDirectory = m.Value;//UnInstall...bat資料夾路徑
-                        string BatFile = BatPath.Replace(m.Value, "");//BAT檔案名稱(含副檔名)
-                        UnInstall(BatDirectory, BatFile);
-                    }
-                }
-                else Console.WriteLine("未找到任何開頭UnInstall...檔案");
-            }
-            else if (ExecuteMode.Equals("Install"))
-            {
-                if (IFileArr.Length != 0)
-                {
-                    //覆寫檔案
-                    foreach (string Name in FList)
-                    {
-                        string DFilePath = DestinationFilePath + @"\" + Name;//目的地路徑
-                        string OFilePath = ServiceFilePath + @"\" + Name;//本地路徑
-                        OverWriteFile(DFilePath, OFilePath, Name);
-                    }
+                        string batFile;//bat檔案名稱(含副檔名)
+                        if (executeMode.Equals("Complete"))//完整安裝
+                        {
+                            //解除安裝
+                            match = Regex.Match(list_UnInstall[0], pattern);
+                            batFile = list_UnInstall[0].Replace(match.Value, "");
+                            UnInstall(dFilePath, batFile, folderName);
 
-                    //安裝
-                    int i = 0;
-                    foreach (string BatPath in IFileArr)
-                    {
-                        string DFilePath = DestinationFilePath + @"\" + FList[i];//目的地路徑
-                        Match m = Regex.Match(BatPath, Pattern);
-                        string BatFile = BatPath.Replace(m.Value, "");//BAT檔案名稱(含副檔名)
-                        i++;
-                        Install(DFilePath, BatFile);
+                            //覆寫目的地檔案
+                            OverWriteFile(dFilePath, sFilePath, folderName);
+
+                            //安裝
+                            match = Regex.Match(list_Install[0], pattern);
+                            batFile = list_Install[0].Replace(match.Value, "");
+                            Install(dFilePath, batFile, folderName);
+                        }
+                        else if (executeMode.Equals("UnInstall"))//僅解除安裝
+                        {
+                            //解除安裝
+                            match = Regex.Match(list_UnInstall[0], pattern);
+                            batFile = list_UnInstall[0].Replace(match.Value, "");
+                            UnInstall(dFilePath, batFile, folderName);
+                        }
+                        else if (executeMode.Equals("Install"))//僅安裝
+                        {
+                            //覆寫目的地檔案
+                            OverWriteFile(dFilePath, sFilePath, folderName);
+
+                            //安裝
+                            match = Regex.Match(list_Install[0], pattern);
+                            batFile = list_Install[0].Replace(match.Value, "");
+                            Install(dFilePath, batFile, folderName);
+                        }
                     }
+                    else Console.WriteLine($"錯誤資訊：服務 {folderName}資料夾未找到批次檔或是數量不對");
                 }
-                else Console.WriteLine("未找到任何開頭Install...檔案");
             }
+            else Console.WriteLine("錯誤資訊：ServiceFiles資料夾尚未放入任何服務");
         }
 
         /// <summary>
         /// 解除安裝服務
         /// </summary>
-        /// <param name="Directory">執行檔案資料夾路徑</param>
-        /// <param name="FileName">執行檔案名稱</param>
-        static void UnInstall(string Directory, string FileName)
+        /// <param name="directory">執行檔案資料夾路徑</param>
+        /// <param name="fileName">執行檔案名稱</param>
+        /// <param name="serviceName">服務名稱</param>
+        private static void UnInstall(string directory, string fileName, string serviceName)
         {
-            Console.WriteLine($"解除安裝 {FileName} 服務");
+            Console.WriteLine($"開始解除安裝 {serviceName}服務");
 
-            //解除安裝
-            ProcessStartInfo proc = new ProcessStartInfo();
-            proc.UseShellExecute = true;
-            proc.WorkingDirectory = Directory;
-            proc.FileName = FileName;
-            proc.Verb = "runas";
+            ProcessStartInfo processStartInfo = new ProcessStartInfo
+            {
+                UseShellExecute = true,//是否使用Shell來啟動
+                WorkingDirectory = directory,//取得要執行處理序的工作目錄
+                FileName = fileName,//要執行的檔案名稱
+                Verb = "runas"//用admin權限執行
+            };
 
-            Process p = new Process();
-            p.EnableRaisingEvents = true;
-            p.StartInfo = proc;
-            p.Start();
-            p.Exited += (sender, e) =>
+            Process process = new Process
+            {
+                EnableRaisingEvents = true,
+                StartInfo = processStartInfo
+            };
+            process.Start();
+            process.Exited += (sender, e) =>
             {
                 Console.WriteLine("解除安裝完成");
-                autoResetEvent.Set();
+                autoResetEvent.Set();//繼續執行緒
             };
-            autoResetEvent.WaitOne();
-            //Thread.Sleep(5 * 1000);
+            autoResetEvent.WaitOne();//暫停執行緒
         }
 
         /// <summary>
         /// 覆寫目的地資料夾檔案
         /// </summary>
-        /// <param name="DFilePath">目的地路徑</param>
-        /// <param name="OFilePath">本地路徑</param>
-        /// <param name="FolderName">資料夾名稱</param>
-        static void OverWriteFile(string DFilePath, string OFilePath, string FolderName)
+        /// <param name="dFilePath">目的地路徑</param>
+        /// <param name="sFilePath">本地路徑</param>
+        /// <param name="folderName">資料夾名稱</param>
+        private static void OverWriteFile(string dFilePath, string sFilePath, string folderName)
         {
-            Console.WriteLine($"開始覆寫 {FolderName} 資料夾");
-            string[] DFileFiles = Directory.GetFiles(OFilePath);
-            foreach (string sourcefile in DFileFiles)
+            try
             {
-                string FileName = Path.GetFileName(sourcefile);
-                string DestFile = Path.Combine(DFilePath, FileName);
-                if (File.Exists(DestFile)) File.Delete(DestFile);
-                File.Copy(sourcefile, DestFile);
+                Console.WriteLine($"開始覆寫 {folderName}資料夾");
+                string[] list_FileFiles = Directory.GetFiles(sFilePath);
+                foreach (string sourcefile in list_FileFiles)
+                {
+                    string fileName = Path.GetFileName(sourcefile);
+                    string destFile = Path.Combine(dFilePath, fileName);
+                    if (File.Exists(destFile)) File.Delete(destFile);
+                    File.Copy(sourcefile, destFile);
+                }
+                Console.WriteLine("覆寫完成");
             }
-            //Thread.Sleep(5 * 1000);
-            Console.WriteLine("覆寫完成");
+            catch (UnauthorizedAccessException)
+            {
+                autoResetEvent.WaitOne();//暫停執行緒
+                Console.WriteLine($"錯誤資訊：覆寫 {folderName}資料夾權限不足");
+                throw;
+            }
+            catch (DirectoryNotFoundException e)
+            {
+                autoResetEvent.WaitOne();//暫停執行緒
+                Console.WriteLine($"錯誤資訊：{e.Message}檔案遺失");
+                throw;
+            }
         }
 
         /// <summary>
         /// 安裝服務
         /// </summary>
-        /// <param name="DFilePath">目的地路徑</param>
-        /// <param name="FileName">執行檔案名稱</param>
-        static void Install(string DFilePath, string FileName)
+        /// <param name="dFilePath">目的地路徑</param>
+        /// <param name="fileName">執行檔案名稱</param>
+        /// <param name="serviceName">服務名稱</param>
+        private static void Install(string dFilePath, string fileName, string serviceName)
         {
-            Console.WriteLine($"安裝 {FileName} 服務");
+            Console.WriteLine($"開始安裝 {serviceName}服務");
 
-            ProcessStartInfo proc = new ProcessStartInfo();
-            proc.UseShellExecute = true;
-            proc.WorkingDirectory = DFilePath;
-            proc.FileName = FileName;
-            proc.Verb = "runas";
+            ProcessStartInfo proc = new ProcessStartInfo
+            {
+                UseShellExecute = true,
+                WorkingDirectory = dFilePath,
+                FileName = fileName,
+                Verb = "runas"
+            };
 
-            Process p = new Process();
-            p.EnableRaisingEvents = true;
-            p.StartInfo = proc;
+            Process p = new Process
+            {
+                EnableRaisingEvents = true,
+                StartInfo = proc
+            };
             p.Start();
             p.Exited += (sender, e) =>
             {
@@ -209,21 +196,23 @@ namespace UpdateService
                 autoResetEvent.Set();
             };
             autoResetEvent.WaitOne();
-            //Thread.Sleep(5 * 1000);
         }
 
         /// <summary>
         /// 取得指定路徑下所有資料夾名稱
         /// </summary>
-        public static List<string> GetFolderName(string FilePath)
+        public static List<string> GetFolderName(string filePath)
         {
-            string[] FileArr = Directory.GetDirectories(FilePath);
-            List<string> FList = new List<string>();
-            foreach (string Name in FileArr)
+            string[] list_FilePath = Directory.GetDirectories(filePath);
+            List<string> list_File = new List<string>();
+            if (list_FilePath.Length > 0)
             {
-                FList.Add(Path.GetFileNameWithoutExtension(Name));
+                foreach (string fileName in list_FilePath)
+                {
+                    list_File.Add(Path.GetFileNameWithoutExtension(fileName));
+                }
             }
-            return FList;
+            return list_File;
         }
     }
 }

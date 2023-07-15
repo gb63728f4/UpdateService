@@ -1,0 +1,12 @@
+C:\Project\UpdateService\UpdateService\bin\Release\UpdateService.exe.config
+C:\Project\UpdateService\UpdateService\bin\Release\UpdateService.exe.manifest
+C:\Project\UpdateService\UpdateService\bin\Release\UpdateService.application
+C:\Project\UpdateService\UpdateService\bin\Release\UpdateService.exe
+C:\Project\UpdateService\UpdateService\bin\Release\UpdateService.pdb
+C:\Project\UpdateService\UpdateService\obj\Release\UpdateService.csproj.AssemblyReference.cache
+C:\Project\UpdateService\UpdateService\obj\Release\UpdateService.csproj.SuggestedBindingRedirects.cache
+C:\Project\UpdateService\UpdateService\obj\Release\UpdateService.csproj.CoreCompileInputs.cache
+C:\Project\UpdateService\UpdateService\obj\Release\UpdateService.exe.manifest
+C:\Project\UpdateService\UpdateService\obj\Release\UpdateService.application
+C:\Project\UpdateService\UpdateService\obj\Release\UpdateService.exe
+C:\Project\UpdateService\UpdateService\obj\Release\UpdateService.pdb
