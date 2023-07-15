@@ -92,6 +92,7 @@ namespace UpdateService
                             batFile = list_Install[0].Replace(match.Value, "");
                             Install(dFilePath, batFile, folderName);
                         }
+                        else Console.WriteLine("錯誤資訊：請確認安裝模式是否設定正確");
                     }
                     else Console.WriteLine($"錯誤資訊：服務 {folderName}資料夾未找到批次檔或是數量不對");
                 }
