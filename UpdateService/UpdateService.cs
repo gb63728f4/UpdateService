@@ -46,6 +46,13 @@ namespace UpdateService
         {
             const string pattern = @".+\\";
             var listFiles = GetFolderName(ServiceFilePath);
+
+            if (Enum.TryParse(ExecuteMode, true, out ExecuteModeEnum modeEnum) == false)
+            {
+                Console.WriteLine("安裝模式設定有誤");
+                return;
+            }
+
             if (listFiles.Count > 0)
             {
                 foreach (var folderName in listFiles)
@@ -66,41 +73,24 @@ namespace UpdateService
                             Directory.CreateDirectory(dFilePath);
                         }
 
-                        string batFile; //bat檔案名稱(含副檔名)
-                        Match match;
-                        if (ExecuteMode.Equals("Complete")) //完整安裝
+                        switch (modeEnum)
                         {
-                            //解除安裝
-                            match = Regex.Match(listUnInstall[0], pattern);
-                            batFile = listUnInstall[0].Replace(match.Value, "");
-                            UnInstall(dFilePath, batFile, folderName);
-
-                            //覆寫目的地檔案
-                            OverWriteFile(dFilePath, sFilePath, folderName);
-
-                            //安裝
-                            match = Regex.Match(listInstall[0], pattern);
-                            batFile = listInstall[0].Replace(match.Value, "");
-                            Install(dFilePath, batFile, folderName);
+                            case ExecuteModeEnum.Complete:
+                                UnInstall(listUnInstall, pattern, dFilePath, folderName);
+                                OverWriteDestinationFile(dFilePath, sFilePath, folderName);
+                                Install(listInstall, pattern, dFilePath, folderName);
+                                break;
+                            case ExecuteModeEnum.UnInstall:
+                                UnInstall(listUnInstall, pattern, dFilePath, folderName);
+                                break;
+                            case ExecuteModeEnum.Install:
+                                OverWriteDestinationFile(dFilePath, sFilePath, folderName);
+                                Install(listInstall, pattern, dFilePath, folderName);
+                                break;
+                            default:
+                                Console.WriteLine("錯誤資訊：請確認安裝模式是否設定正確");
+                                break;
                         }
-                        else if (ExecuteMode.Equals("UnInstall")) //僅解除安裝
-                        {
-                            //解除安裝
-                            match = Regex.Match(listUnInstall[0], pattern);
-                            batFile = listUnInstall[0].Replace(match.Value, "");
-                            UnInstall(dFilePath, batFile, folderName);
-                        }
-                        else if (ExecuteMode.Equals("Install")) //僅安裝
-                        {
-                            //覆寫目的地檔案
-                            OverWriteFile(dFilePath, sFilePath, folderName);
-
-                            //安裝
-                            match = Regex.Match(listInstall[0], pattern);
-                            batFile = listInstall[0].Replace(match.Value, "");
-                            Install(dFilePath, batFile, folderName);
-                        }
-                        else Console.WriteLine("錯誤資訊：請確認安裝模式是否設定正確");
                     }
                     else Console.WriteLine($"錯誤資訊：服務 {folderName}資料夾未找到批次檔或是數量不對");
                 }
