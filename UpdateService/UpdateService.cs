@@ -28,12 +28,16 @@ namespace UpdateService
             try
             {
                 //建立ServiceFiles資料夾
-                if (!Directory.Exists(ServiceFilePath)) Directory.CreateDirectory(ServiceFilePath);
+                if (Directory.Exists(ServiceFilePath) == false)
+                {
+                    Directory.CreateDirectory(ServiceFilePath);
+                }
+
                 ExecuteProcess();
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine("錯誤資訊：" + e.Message);
+                Console.WriteLine("錯誤資訊：" + ex.Message);
             }
 
             Console.ReadKey();
@@ -198,7 +202,7 @@ namespace UpdateService
         /// <param name="dFilePath">目的地路徑</param>
         /// <param name="sFilePath">本地路徑</param>
         /// <param name="folderName">資料夾名稱</param>
-        private static void OverWriteFile(string dFilePath, string sFilePath, string folderName)
+        private static void OverWriteDestinationFile(string dFilePath, string sFilePath, string folderName)
         {
             try
             {
