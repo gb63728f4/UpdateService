@@ -11,47 +11,54 @@ namespace UpdateService
     /// <summary>
     /// 安裝模式說明:Complete:解除再重新安裝，UnInstall:僅解除安裝，Install:僅安裝
     /// </summary>
-    class UpdateService
+    public abstract class UpdateService
     {
-        public static AutoResetEvent autoResetEvent = new AutoResetEvent(false);
+        private static readonly AutoResetEvent AutoResetEvent = new AutoResetEvent(false);
 
-        public static readonly string destinationFilePath = WebConfigurationManager.AppSettings["DestinationFilePath"].ToString();//服務安裝位置
-        public static readonly string serviceFilePath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"\ServiceFiles";//服務本地位置
-        public static readonly string executeMode = WebConfigurationManager.AppSettings["ExecuteMode"].ToString();//服務安裝模式
+        private static readonly string
+            DestinationFilePath = WebConfigurationManager.AppSettings["DestinationFilePath"]; //服務安裝位置
 
-        public static void Main(string[] args)
+        private static readonly string ServiceFilePath =
+            AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"\ServiceFiles"; //服務本地位置
+
+        private static readonly string ExecuteMode = WebConfigurationManager.AppSettings["ExecuteMode"]; //服務安裝模式
+
+        public static void Main()
         {
             try
             {
                 //建立ServiceFiles資料夾
-                if (!Directory.Exists(serviceFilePath)) Directory.CreateDirectory(serviceFilePath);
+                if (!Directory.Exists(ServiceFilePath)) Directory.CreateDirectory(ServiceFilePath);
                 ExecuteProcess();
             }
             catch (Exception e)
             {
                 Console.WriteLine("錯誤資訊：" + e.Message);
             }
+
             Console.ReadKey();
         }
 
         /// <summary>
         /// 執行流程
         /// </summary>
-        static void ExecuteProcess()
+        private static void ExecuteProcess()
         {
-            Match match;
-            string pattern = @".+\\";
-            List<string> list_Files = GetFolderName(serviceFilePath);
-            if (list_Files.Count > 0)
+            const string pattern = @".+\\";
+            var listFiles = GetFolderName(ServiceFilePath);
+            if (listFiles.Count > 0)
             {
-                foreach (string folderName in list_Files)
+                foreach (var folderName in listFiles)
                 {
-                    string sFilePath = serviceFilePath + @"\" + folderName;//本地路徑
-                    string dFilePath = destinationFilePath + @"\" + folderName;//目的地路徑
+                    var sFilePath = ServiceFilePath + @"\" + folderName; //本地路徑
+                    var dFilePath = DestinationFilePath + @"\" + folderName; //目的地路徑
 
-                    string[] list_UnInstall = Directory.GetFiles(sFilePath, "UnInstall*.bat", SearchOption.AllDirectories); //尋找UnInstall開頭bat檔
-                    string[] list_Install = Directory.GetFiles(sFilePath, "Install*.bat", SearchOption.AllDirectories);//尋找Install開頭bat檔
-                    if (list_UnInstall.Length == 1 && list_Install.Length == 1)
+                    var listUnInstall =
+                        Directory.GetFiles(sFilePath, "UnInstall*.bat",
+                            SearchOption.AllDirectories); //尋找UnInstall開頭bat檔
+                    var listInstall =
+                        Directory.GetFiles(sFilePath, "Install*.bat", SearchOption.AllDirectories); //尋找Install開頭bat檔
+                    if (listUnInstall.Length == 1 && listInstall.Length == 1)
                     {
                         if (!Directory.Exists(dFilePath))
                         {
@@ -59,37 +66,38 @@ namespace UpdateService
                             Directory.CreateDirectory(dFilePath);
                         }
 
-                        string batFile;//bat檔案名稱(含副檔名)
-                        if (executeMode.Equals("Complete"))//完整安裝
+                        string batFile; //bat檔案名稱(含副檔名)
+                        Match match;
+                        if (ExecuteMode.Equals("Complete")) //完整安裝
                         {
                             //解除安裝
-                            match = Regex.Match(list_UnInstall[0], pattern);
-                            batFile = list_UnInstall[0].Replace(match.Value, "");
+                            match = Regex.Match(listUnInstall[0], pattern);
+                            batFile = listUnInstall[0].Replace(match.Value, "");
                             UnInstall(dFilePath, batFile, folderName);
 
                             //覆寫目的地檔案
                             OverWriteFile(dFilePath, sFilePath, folderName);
 
                             //安裝
-                            match = Regex.Match(list_Install[0], pattern);
-                            batFile = list_Install[0].Replace(match.Value, "");
+                            match = Regex.Match(listInstall[0], pattern);
+                            batFile = listInstall[0].Replace(match.Value, "");
                             Install(dFilePath, batFile, folderName);
                         }
-                        else if (executeMode.Equals("UnInstall"))//僅解除安裝
+                        else if (ExecuteMode.Equals("UnInstall")) //僅解除安裝
                         {
                             //解除安裝
-                            match = Regex.Match(list_UnInstall[0], pattern);
-                            batFile = list_UnInstall[0].Replace(match.Value, "");
+                            match = Regex.Match(listUnInstall[0], pattern);
+                            batFile = listUnInstall[0].Replace(match.Value, "");
                             UnInstall(dFilePath, batFile, folderName);
                         }
-                        else if (executeMode.Equals("Install"))//僅安裝
+                        else if (ExecuteMode.Equals("Install")) //僅安裝
                         {
                             //覆寫目的地檔案
                             OverWriteFile(dFilePath, sFilePath, folderName);
 
                             //安裝
-                            match = Regex.Match(list_Install[0], pattern);
-                            batFile = list_Install[0].Replace(match.Value, "");
+                            match = Regex.Match(listInstall[0], pattern);
+                            batFile = listInstall[0].Replace(match.Value, "");
                             Install(dFilePath, batFile, folderName);
                         }
                         else Console.WriteLine("錯誤資訊：請確認安裝模式是否設定正確");
@@ -110,26 +118,27 @@ namespace UpdateService
         {
             Console.WriteLine($"開始解除安裝 {serviceName}服務");
 
-            ProcessStartInfo processStartInfo = new ProcessStartInfo
+            var processStartInfo = new ProcessStartInfo
             {
-                UseShellExecute = true,//是否使用Shell來啟動
-                WorkingDirectory = directory,//取得要執行處理序的工作目錄
-                FileName = fileName,//要執行的檔案名稱
-                Verb = "runas"//用admin權限執行
+                UseShellExecute = true, //是否使用Shell來啟動
+                WorkingDirectory = directory, //取得要執行處理序的工作目錄
+                FileName = fileName, //要執行的檔案名稱
+                Verb = "runas" //用admin權限執行
             };
 
-            Process process = new Process
+            using (var process = new Process())
             {
-                EnableRaisingEvents = true,
-                StartInfo = processStartInfo
-            };
-            process.Start();
-            process.Exited += (sender, e) =>
-            {
-                Console.WriteLine("解除安裝完成");
-                autoResetEvent.Set();//繼續執行緒
-            };
-            autoResetEvent.WaitOne();//暫停執行緒
+                process.EnableRaisingEvents = true;
+                process.StartInfo = processStartInfo;
+                process.Start();
+                process.Exited += (sender, e) =>
+                {
+                    Console.WriteLine("解除安裝完成");
+                    AutoResetEvent.Set(); //繼續執行緒
+                };
+            }
+
+            AutoResetEvent.WaitOne(); //暫停執行緒
         }
 
         /// <summary>
@@ -143,25 +152,26 @@ namespace UpdateService
             try
             {
                 Console.WriteLine($"開始覆寫 {folderName}資料夾");
-                string[] list_FileFiles = Directory.GetFiles(sFilePath);
-                foreach (string sourcefile in list_FileFiles)
+                var listFileFiles = Directory.GetFiles(sFilePath);
+                foreach (var file in listFileFiles)
                 {
-                    string fileName = Path.GetFileName(sourcefile);
-                    string destFile = Path.Combine(dFilePath, fileName);
+                    var fileName = Path.GetFileName(file);
+                    var destFile = Path.Combine(dFilePath, fileName);
                     if (File.Exists(destFile)) File.Delete(destFile);
-                    File.Copy(sourcefile, destFile);
+                    File.Copy(file, destFile);
                 }
+
                 Console.WriteLine("覆寫完成");
             }
             catch (UnauthorizedAccessException)
             {
-                autoResetEvent.WaitOne();//暫停執行緒
+                AutoResetEvent.WaitOne(); //暫停執行緒
                 Console.WriteLine($"錯誤資訊：覆寫 {folderName}資料夾權限不足");
                 throw;
             }
             catch (DirectoryNotFoundException e)
             {
-                autoResetEvent.WaitOne();//暫停執行緒
+                AutoResetEvent.WaitOne(); //暫停執行緒
                 Console.WriteLine($"錯誤資訊：{e.Message}檔案遺失");
                 throw;
             }
@@ -177,7 +187,7 @@ namespace UpdateService
         {
             Console.WriteLine($"開始安裝 {serviceName}服務");
 
-            ProcessStartInfo proc = new ProcessStartInfo
+            var proc = new ProcessStartInfo
             {
                 UseShellExecute = true,
                 WorkingDirectory = dFilePath,
@@ -185,35 +195,37 @@ namespace UpdateService
                 Verb = "runas"
             };
 
-            Process p = new Process
+            using (var process = new Process())
             {
-                EnableRaisingEvents = true,
-                StartInfo = proc
-            };
-            p.Start();
-            p.Exited += (sender, e) =>
-            {
-                Console.WriteLine("安裝完成");
-                autoResetEvent.Set();
-            };
-            autoResetEvent.WaitOne();
+                process.EnableRaisingEvents = true;
+                process.StartInfo = proc;
+                process.Start();
+                process.Exited += (sender, e) =>
+                {
+                    Console.WriteLine("安裝完成");
+                    AutoResetEvent.Set();
+                };
+            }
+
+            AutoResetEvent.WaitOne();
         }
 
         /// <summary>
         /// 取得指定路徑下所有資料夾名稱
         /// </summary>
-        public static List<string> GetFolderName(string filePath)
+        private static List<string> GetFolderName(string filePath)
         {
-            string[] list_FilePath = Directory.GetDirectories(filePath);
-            List<string> list_File = new List<string>();
-            if (list_FilePath.Length > 0)
+            var listFilePath = Directory.GetDirectories(filePath);
+            var listFile = new List<string>();
+            if (listFilePath.Length > 0)
             {
-                foreach (string fileName in list_FilePath)
+                foreach (var fileName in listFilePath)
                 {
-                    list_File.Add(Path.GetFileNameWithoutExtension(fileName));
+                    listFile.Add(Path.GetFileNameWithoutExtension(fileName));
                 }
             }
-            return list_File;
+
+            return listFile;
         }
     }
 }
