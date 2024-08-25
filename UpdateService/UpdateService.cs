@@ -147,7 +147,7 @@ namespace UpdateService
         /// <param name="directory">執行檔案資料夾路徑</param>
         /// <param name="fileName">執行檔案名稱</param>
         /// <param name="serviceName">服務名稱</param>
-        private static void UnInstall(string directory, string fileName, string serviceName)
+        private static void UnInstallService(string directory, string fileName, string serviceName)
         {
             Console.WriteLine($"開始解除安裝 {serviceName}服務");
 
@@ -172,6 +172,34 @@ namespace UpdateService
             }
 
             AutoResetEvent.WaitOne(); //暫停執行緒
+        }
+
+        /// <summary>
+        /// 執行安裝流程
+        /// </summary>
+        /// <param name="listInstall"></param>
+        /// <param name="pattern"></param>
+        /// <param name="dFilePath"></param>
+        /// <param name="folderName"></param>
+        private static void Install(string[] listInstall, string pattern, string dFilePath, string folderName)
+        {
+            var match = Regex.Match(listInstall[0], pattern);
+            var batFile = listInstall[0].Replace(match.Value, "");
+            InstallService(dFilePath, batFile, folderName);
+        }
+
+        /// <summary>
+        /// 執行解除安裝流程
+        /// </summary>
+        /// <param name="listUnInstall"></param>
+        /// <param name="pattern"></param>
+        /// <param name="dFilePath"></param>
+        /// <param name="folderName"></param>
+        private static void UnInstall(string[] listUnInstall, string pattern, string dFilePath, string folderName)
+        {
+            var match = Regex.Match(listUnInstall[0], pattern);
+            var batFile = listUnInstall[0].Replace(match.Value, "");
+            UnInstallService(dFilePath, batFile, folderName);
         }
 
         /// <summary>
