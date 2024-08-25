@@ -64,6 +64,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ExecuteModeEnum.cs" />
     <Compile Include="UpdateService.cs" />
   </ItemGroup>
   <ItemGroup>
