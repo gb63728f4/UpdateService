@@ -8,9 +8,6 @@ using System.Text.RegularExpressions;
 
 namespace UpdateService
 {
-    /// <summary>
-    /// 安裝模式說明:Complete:解除再重新安裝，UnInstall:僅解除安裝，Install:僅安裝
-    /// </summary>
     public abstract class UpdateService
     {
         private static readonly AutoResetEvent AutoResetEvent = new AutoResetEvent(false);
