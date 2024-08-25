@@ -109,6 +109,39 @@ namespace UpdateService
         }
 
         /// <summary>
+        /// 安裝服務
+        /// </summary>
+        /// <param name="dFilePath">目的地路徑</param>
+        /// <param name="fileName">執行檔案名稱</param>
+        /// <param name="serviceName">服務名稱</param>
+        private static void InstallService(string dFilePath, string fileName, string serviceName)
+        {
+            Console.WriteLine($"開始安裝 {serviceName}服務");
+
+            var proc = new ProcessStartInfo
+            {
+                UseShellExecute = true,
+                WorkingDirectory = dFilePath,
+                FileName = fileName,
+                Verb = "runas"
+            };
+
+            using (var process = new Process())
+            {
+                process.EnableRaisingEvents = true;
+                process.StartInfo = proc;
+                process.Start();
+                process.Exited += (sender, e) =>
+                {
+                    Console.WriteLine("安裝完成");
+                    AutoResetEvent.Set();
+                };
+            }
+
+            AutoResetEvent.WaitOne();
+        }
+
+        /// <summary>
         /// 解除安裝服務
         /// </summary>
         /// <param name="directory">執行檔案資料夾路徑</param>
@@ -175,39 +208,6 @@ namespace UpdateService
                 Console.WriteLine($"錯誤資訊：{e.Message}檔案遺失");
                 throw;
             }
-        }
-
-        /// <summary>
-        /// 安裝服務
-        /// </summary>
-        /// <param name="dFilePath">目的地路徑</param>
-        /// <param name="fileName">執行檔案名稱</param>
-        /// <param name="serviceName">服務名稱</param>
-        private static void Install(string dFilePath, string fileName, string serviceName)
-        {
-            Console.WriteLine($"開始安裝 {serviceName}服務");
-
-            var proc = new ProcessStartInfo
-            {
-                UseShellExecute = true,
-                WorkingDirectory = dFilePath,
-                FileName = fileName,
-                Verb = "runas"
-            };
-
-            using (var process = new Process())
-            {
-                process.EnableRaisingEvents = true;
-                process.StartInfo = proc;
-                process.Start();
-                process.Exited += (sender, e) =>
-                {
-                    Console.WriteLine("安裝完成");
-                    AutoResetEvent.Set();
-                };
-            }
-
-            AutoResetEvent.WaitOne();
         }
 
         /// <summary>
