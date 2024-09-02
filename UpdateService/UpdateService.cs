@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Web.Configuration;
 using System.Text.RegularExpressions;
 
@@ -30,7 +31,7 @@ namespace UpdateService
                     Directory.CreateDirectory(ServiceFilePath);
                 }
 
-                ExecuteProcess();
+                ExecuteService();
             }
             catch (Exception ex)
             {
@@ -41,12 +42,12 @@ namespace UpdateService
         }
 
         /// <summary>
-        /// 執行流程
+        /// 執行服務
         /// </summary>
-        private static void ExecuteProcess()
+        private static void ExecuteService()
         {
             const string pattern = @".+\\";
-            var listFiles = GetFolderName(ServiceFilePath);
+            var folderNames = GetFolderName(ServiceFilePath);
 
             if (Enum.TryParse(ExecuteMode, true, out ExecuteModeEnum modeEnum) == false)
             {
@@ -54,39 +55,39 @@ namespace UpdateService
                 return;
             }
 
-            if (listFiles.Count > 0)
+            if (folderNames.Count > 0)
             {
-                foreach (var folderName in listFiles)
+                foreach (var folderName in folderNames)
                 {
-                    var sFilePath = ServiceFilePath + @"\" + folderName; //本地路徑
-                    var dFilePath = DestinationFilePath + @"\" + folderName; //目的地路徑
+                    var serviceFilePath = ServiceFilePath + @"\" + folderName; //本地路徑
+                    var destinationFilePath = DestinationFilePath + @"\" + folderName; //目的地路徑
 
-                    var listUnInstall =
-                        Directory.GetFiles(sFilePath, "UnInstall*.bat",
+                    var unInstalls =
+                        Directory.GetFiles(serviceFilePath, "UnInstall*.bat",
                             SearchOption.AllDirectories); //尋找UnInstall開頭bat檔
-                    var listInstall =
-                        Directory.GetFiles(sFilePath, "Install*.bat", SearchOption.AllDirectories); //尋找Install開頭bat檔
-                    if (listUnInstall.Length == 1 && listInstall.Length == 1)
+                    var installs=
+                        Directory.GetFiles(serviceFilePath, "Install*.bat", SearchOption.AllDirectories); //尋找Install開頭bat檔
+                    if (unInstalls.Length == 1 && installs.Length == 1)
                     {
-                        if (!Directory.Exists(dFilePath))
+                        if (!Directory.Exists(destinationFilePath))
                         {
                             Console.WriteLine($"建立目的地服務資料夾 {folderName}");
-                            Directory.CreateDirectory(dFilePath);
+                            Directory.CreateDirectory(destinationFilePath);
                         }
 
                         switch (modeEnum)
                         {
                             case ExecuteModeEnum.Complete:
-                                UnInstall(listUnInstall, pattern, dFilePath, folderName);
-                                OverWriteDestinationFile(dFilePath, sFilePath, folderName);
-                                Install(listInstall, pattern, dFilePath, folderName);
+                                UnInstall(unInstalls, pattern, destinationFilePath, folderName);
+                                OverWriteDestinationFile(destinationFilePath, serviceFilePath, folderName);
+                                Install(installs, pattern, destinationFilePath, folderName);
                                 break;
                             case ExecuteModeEnum.UnInstall:
-                                UnInstall(listUnInstall, pattern, dFilePath, folderName);
+                                UnInstall(unInstalls, pattern, destinationFilePath, folderName);
                                 break;
                             case ExecuteModeEnum.Install:
-                                OverWriteDestinationFile(dFilePath, sFilePath, folderName);
-                                Install(listInstall, pattern, dFilePath, folderName);
+                                OverWriteDestinationFile(destinationFilePath, serviceFilePath, folderName);
+                                Install(installs, pattern, destinationFilePath, folderName);
                                 break;
                             default:
                                 Console.WriteLine("錯誤資訊：請確認安裝模式是否設定正確");
@@ -100,31 +101,26 @@ namespace UpdateService
         }
 
         /// <summary>
-        /// 安裝服務
+        /// 執行批次檔
         /// </summary>
-        /// <param name="dFilePath">目的地路徑</param>
+        /// <param name="workingDirectory">目的地路徑</param>
         /// <param name="fileName">執行檔案名稱</param>
-        /// <param name="serviceName">服務名稱</param>
-        private static void InstallService(string dFilePath, string fileName, string serviceName)
+        private static void ExecuteProcess(string workingDirectory, string fileName)
         {
-            Console.WriteLine($"開始安裝 {serviceName}服務");
-
-            var proc = new ProcessStartInfo
-            {
-                UseShellExecute = true,
-                WorkingDirectory = dFilePath,
-                FileName = fileName,
-                Verb = "runas"
-            };
-
             using (var process = new Process())
             {
                 process.EnableRaisingEvents = true;
-                process.StartInfo = proc;
+                process.StartInfo = new ProcessStartInfo
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = workingDirectory,
+                    FileName = fileName,
+                    Verb = "runas"
+                };
                 process.Start();
                 process.Exited += (sender, e) =>
                 {
-                    Console.WriteLine("安裝完成");
+                    Console.WriteLine("執行完成");
                     AutoResetEvent.Set();
                 };
             }
@@ -133,82 +129,51 @@ namespace UpdateService
         }
 
         /// <summary>
-        /// 解除安裝服務
-        /// </summary>
-        /// <param name="directory">執行檔案資料夾路徑</param>
-        /// <param name="fileName">執行檔案名稱</param>
-        /// <param name="serviceName">服務名稱</param>
-        private static void UnInstallService(string directory, string fileName, string serviceName)
-        {
-            Console.WriteLine($"開始解除安裝 {serviceName}服務");
-
-            var processStartInfo = new ProcessStartInfo
-            {
-                UseShellExecute = true, //是否使用Shell來啟動
-                WorkingDirectory = directory, //取得要執行處理序的工作目錄
-                FileName = fileName, //要執行的檔案名稱
-                Verb = "runas" //用admin權限執行
-            };
-
-            using (var process = new Process())
-            {
-                process.EnableRaisingEvents = true;
-                process.StartInfo = processStartInfo;
-                process.Start();
-                process.Exited += (sender, e) =>
-                {
-                    Console.WriteLine("解除安裝完成");
-                    AutoResetEvent.Set(); //繼續執行緒
-                };
-            }
-
-            AutoResetEvent.WaitOne(); //暫停執行緒
-        }
-
-        /// <summary>
         /// 執行安裝流程
         /// </summary>
-        /// <param name="listInstall"></param>
+        /// <param name="installs"></param>
         /// <param name="pattern"></param>
-        /// <param name="dFilePath"></param>
+        /// <param name="destinationFilePath"></param>
         /// <param name="folderName"></param>
-        private static void Install(string[] listInstall, string pattern, string dFilePath, string folderName)
+        private static void Install(string[] installs, string pattern, string destinationFilePath, string folderName)
         {
-            var match = Regex.Match(listInstall[0], pattern);
-            var batFile = listInstall[0].Replace(match.Value, "");
-            InstallService(dFilePath, batFile, folderName);
+            var match = Regex.Match(installs[0], pattern);
+            var batFile = installs[0].Replace(match.Value, "");
+            Console.WriteLine($"開始執行 安裝{folderName}服務");
+            ExecuteProcess(destinationFilePath, batFile);
         }
 
         /// <summary>
         /// 執行解除安裝流程
         /// </summary>
-        /// <param name="listUnInstall"></param>
+        /// <param name="unInstalls"></param>
         /// <param name="pattern"></param>
-        /// <param name="dFilePath"></param>
+        /// <param name="destinationFilePath"></param>
         /// <param name="folderName"></param>
-        private static void UnInstall(string[] listUnInstall, string pattern, string dFilePath, string folderName)
+        private static void UnInstall(string[] unInstalls, string pattern, string destinationFilePath, string folderName)
         {
-            var match = Regex.Match(listUnInstall[0], pattern);
-            var batFile = listUnInstall[0].Replace(match.Value, "");
-            UnInstallService(dFilePath, batFile, folderName);
+            var match = Regex.Match(unInstalls[0], pattern);
+            var batFile = unInstalls[0].Replace(match.Value, "");
+            Console.WriteLine($"開始執行 解除安裝{folderName}服務");
+            ExecuteProcess(destinationFilePath, batFile);
         }
 
         /// <summary>
         /// 覆寫目的地資料夾檔案
         /// </summary>
-        /// <param name="dFilePath">目的地路徑</param>
-        /// <param name="sFilePath">本地路徑</param>
+        /// <param name="destinationFilePath">目的地路徑</param>
+        /// <param name="serviceFilePath">本地路徑</param>
         /// <param name="folderName">資料夾名稱</param>
-        private static void OverWriteDestinationFile(string dFilePath, string sFilePath, string folderName)
+        private static void OverWriteDestinationFile(string destinationFilePath, string serviceFilePath, string folderName)
         {
             try
             {
                 Console.WriteLine($"開始覆寫 {folderName}資料夾");
-                var listFileFiles = Directory.GetFiles(sFilePath);
+                var listFileFiles = Directory.GetFiles(serviceFilePath);
                 foreach (var file in listFileFiles)
                 {
                     var fileName = Path.GetFileName(file);
-                    var destFile = Path.Combine(dFilePath, fileName);
+                    var destFile = Path.Combine(destinationFilePath, fileName);
                     if (File.Exists(destFile)) File.Delete(destFile);
                     File.Copy(file, destFile);
                 }
@@ -234,17 +199,16 @@ namespace UpdateService
         /// </summary>
         private static List<string> GetFolderName(string filePath)
         {
-            var listFilePath = Directory.GetDirectories(filePath);
-            var listFile = new List<string>();
-            if (listFilePath.Length > 0)
+            var fileNames = Directory.GetDirectories(filePath);
+            var files = new List<string>();
+            if (fileNames.Length <= 0)
             {
-                foreach (var fileName in listFilePath)
-                {
-                    listFile.Add(Path.GetFileNameWithoutExtension(fileName));
-                }
+                return files;
             }
 
-            return listFile;
+            files.AddRange(fileNames.Select(Path.GetFileNameWithoutExtension));
+
+            return files;
         }
     }
 }
