@@ -166,12 +166,10 @@ namespace UpdateService
             catch (UnauthorizedAccessException)
             {
                 _log($"錯誤資訊：覆寫 {folderName} 資料夾權限不足");
-                throw;
             }
             catch (DirectoryNotFoundException e)
             {
                 _log($"錯誤資訊：{e.Message} 檔案遺失");
-                throw;
             }
         }
 
@@ -185,7 +183,7 @@ namespace UpdateService
             if (directories.Length == 0)
                 return names;
 
-            names.AddRange(directories.Select(Path.GetFileNameWithoutExtension)!);
+            names.AddRange(directories.Select(Path.GetFileNameWithoutExtension).Where(n => n != null)!);
             return names;
         }
     }

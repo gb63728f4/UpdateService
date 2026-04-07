@@ -45,9 +45,13 @@ namespace UpdateService
                         }
                     }
                 }
-                catch
+                catch (JsonException)
                 {
-                    // 無法讀取設定時使用預設值
+                    // 設定檔格式有誤，使用預設值
+                }
+                catch (IOException)
+                {
+                    // 無法讀取設定檔，使用預設值
                 }
             }
 
