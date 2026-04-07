@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace UpdateService
 {
@@ -40,7 +39,6 @@ namespace UpdateService
         /// </summary>
         private async Task ExecuteServiceAsync()
         {
-            const string pattern = @".+\\";
             var folderNames = GetFolderName(_serviceFilePath);
 
             if (folderNames.Count == 0)
@@ -68,16 +66,16 @@ namespace UpdateService
                     switch (_executeMode)
                     {
                         case ExecuteModeEnum.Complete:
-                            await UnInstallAsync(unInstalls, pattern, destinationFilePath, folderName);
+                            await UnInstallAsync(unInstalls, destinationFilePath, folderName);
                             OverWriteDestinationFile(destinationFilePath, serviceFilePath, folderName);
-                            await InstallAsync(installs, pattern, destinationFilePath, folderName);
+                            await InstallAsync(installs, destinationFilePath, folderName);
                             break;
                         case ExecuteModeEnum.UnInstall:
-                            await UnInstallAsync(unInstalls, pattern, destinationFilePath, folderName);
+                            await UnInstallAsync(unInstalls, destinationFilePath, folderName);
                             break;
                         case ExecuteModeEnum.Install:
                             OverWriteDestinationFile(destinationFilePath, serviceFilePath, folderName);
-                            await InstallAsync(installs, pattern, destinationFilePath, folderName);
+                            await InstallAsync(installs, destinationFilePath, folderName);
                             break;
                         default:
                             _log("錯誤資訊：請確認安裝模式是否設定正確");
@@ -122,10 +120,9 @@ namespace UpdateService
         /// <summary>
         /// 執行安裝流程
         /// </summary>
-        private async Task InstallAsync(string[] installs, string pattern, string destinationFilePath, string folderName)
+        private async Task InstallAsync(string[] installs, string destinationFilePath, string folderName)
         {
-            var match = Regex.Match(installs[0], pattern);
-            var batFile = installs[0].Replace(match.Value, "");
+            var batFile = Path.GetFileName(installs[0]);
             _log($"開始執行 安裝 {folderName} 服務");
             await ExecuteProcessAsync(destinationFilePath, batFile);
         }
@@ -133,10 +130,9 @@ namespace UpdateService
         /// <summary>
         /// 執行解除安裝流程
         /// </summary>
-        private async Task UnInstallAsync(string[] unInstalls, string pattern, string destinationFilePath, string folderName)
+        private async Task UnInstallAsync(string[] unInstalls, string destinationFilePath, string folderName)
         {
-            var match = Regex.Match(unInstalls[0], pattern);
-            var batFile = unInstalls[0].Replace(match.Value, "");
+            var batFile = Path.GetFileName(unInstalls[0]);
             _log($"開始執行 解除安裝 {folderName} 服務");
             await ExecuteProcessAsync(destinationFilePath, batFile);
         }
@@ -166,10 +162,12 @@ namespace UpdateService
             catch (UnauthorizedAccessException)
             {
                 _log($"錯誤資訊：覆寫 {folderName} 資料夾權限不足");
+                throw;
             }
             catch (DirectoryNotFoundException e)
             {
                 _log($"錯誤資訊：{e.Message} 檔案遺失");
+                throw;
             }
         }
 
@@ -183,7 +181,10 @@ namespace UpdateService
             if (directories.Length == 0)
                 return names;
 
-            names.AddRange(directories.Select(Path.GetFileNameWithoutExtension).Where(n => n != null)!);
+            names.AddRange(directories
+                .Select(Path.GetFileNameWithoutExtension)
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Select(n => n!));
             return names;
         }
     }

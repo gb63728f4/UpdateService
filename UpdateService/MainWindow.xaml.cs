@@ -27,7 +27,7 @@ namespace UpdateService
                 try
                 {
                     var json = File.ReadAllText(AppSettingsPath);
-                    var doc = JsonDocument.Parse(json);
+                    using var doc = JsonDocument.Parse(json);
 
                     if (doc.RootElement.TryGetProperty("DestinationFilePath", out var dest))
                         TxtDestinationFilePath.Text = dest.GetString() ?? string.Empty;
